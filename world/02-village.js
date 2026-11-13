@@ -79,7 +79,7 @@ const CABIN=building({
   for(const [z, ry] of [[-37.4, 0],[-35.6, Math.PI]]){ bx("wood", 0.44, 0.04, 0.42, 17.6, F+0.46, z, 0.8, 0, "#7a5236");
     addSeat(17.6, z, F, ry, "A CHAIR AT THE TABLE"); }
   // a step up to the door
-  bx("wood", 1.4, 0.12, 0.6, 15, F-0.06, -31.6, 0.8, 0, "#7a5236"); addFlat(14.3, 15.7, -31.9, -31.3, F-0.0);
+  bx("wood", 1.4, 0.12, 0.62, 15, F-0.08, -31.64, 0.8, 0, "#7a5236"); addFlat(14.3, 15.7, -32.0, -31.33, F-0.02);
   emergencyLight(15, F+2.45, -41.7, 0, [10.2, 19.8, -41.8, -32.2, F-0.5, F+2.8]);
 }
 
@@ -103,7 +103,7 @@ const CABIN=building({
    Boards on posts out over the pond from its west bank, where the bank's wall is
    open (01). A bench at its end. */
 { const x0=POND.x-POND.r-2.4, x1=POND.x-POND.r+6.5, z0=POND.z-1.0, z1=POND.z+1.0, y=0.12;
-  for(let x=x0; x<x1; x+=0.16) bx("wood", 0.145, 0.04, z1-z0, x+0.08, y-0.02, (z0+z1)/2, 0.9, 0, ["#9a7452","#8a6a4a","#a07a56"][((x*31)|0)%3]);
+  for(let x=x0; x<x1; x+=0.16) bx("wood", 0.145, 0.04, z1-z0, x+0.08, y-0.02, (z0+z1)/2, 0.9, 0, ["#8a8070","#7d7466","#948a7a"][((x*31)|0)%3]);
   for(const x of [x0+0.6, (x0+x1)/2, x1-0.15]) for(const z of [z0+0.08, z1-0.08]) cyl("wood", 0.08, 0.08, 1.6, 10, x, y-0.8, z, "#5a4632");
   addFlat(x0, x1, z0, z1, y);
   // its rails along the sides, solid; open at the bank

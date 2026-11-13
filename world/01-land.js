@@ -53,7 +53,7 @@ buildTerrain(RINGS);
 const RING8=RINGS.find(r=>r.cell===8), RING32=RINGS.find(r=>r.cell===32);
 
 /* ---- the pond ---------------------------------------------------------------- */
-waterPlane({x0:POND.x-POND.r-4, x1:POND.x+POND.r+4, z0:POND.z-POND.r-4, z1:POND.z+POND.r+4, y:POND.wy});
+waterPlane({x0:POND.x-POND.r-4, x1:POND.x+POND.r+4, z0:POND.z-POND.r-4, z1:POND.z+POND.r+4, y:POND.wy, ripple:0.11, color:0x2e4852});
 // the bank: a low wall of colliders a step short of the water, all the way round but where the jetty goes out
 { const N=48; for(let k=0;k<N;k++){ const a=k/N*Math.PI*2, a1=(k+1)/N*Math.PI*2, R=POND.r+1.4;
     if(a>Math.PI*0.92 && a<Math.PI*1.08) continue;                     // (the jetty, on the west side)

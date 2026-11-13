@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>New World · built on the engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<!-- A STARTER: the smallest world worth walking in. Copy this page and the starter/ folder to begin a new world.
+     The engine and the world are classic scripts sharing one global scope, loaded in this order. Order is
+     load-bearing: each runs its top-level code as it arrives, and the world is finished by the time the last
+     one returns. No build step, no bundler, no modules: ES modules will not load from a file:// page, and this
+     opens by double-clicking it. See docs/ARCHITECTURE.md.
+
+     1. the world's config (plain data, before the engine)                -->
+<script src="starter/00-world.js"></script>
+<!-- 2. the engine's systems: nothing world-specific is built here       -->
+<script src="engine/00-config.js"></script>
+<script src="engine/01-helpers.js"></script>
+<script src="engine/02-textures.js"></script>
+<script src="engine/02b-ui.js"></script>
+<script src="engine/03-scene.js"></script>
+<script src="engine/04-terrain.js"></script>
+<script src="engine/05-sky.js"></script>
+<script src="engine/05b-reflect.js"></script>
+<script src="engine/06-collision.js"></script>
+<script src="engine/06b-audio.js"></script>
+<script src="engine/06c-warp.js"></script>
+<script src="engine/07-forest.js"></script>
+<script src="engine/09-building.js"></script>
+<script src="engine/10a-vehicles.js"></script>
+<script src="engine/10b-cars.js"></script>
+<script src="engine/11-driving.js"></script>
+<script src="engine/13-props.js"></script>
+<script src="engine/14a-smoke.js"></script>
+<script src="engine/14b-people.js"></script>
+<script src="engine/14c-critters.js"></script>
+<script src="engine/14q-crowd.js"></script>
+<script src="engine/14t-pets.js"></script>
+<script src="engine/14u-water.js"></script>
+<!-- 3. the world                                                      -->
+<script src="starter/01-world.js"></script>
+<!-- 4. the engine finishes: bake, lights, weather, the player, the HUD, the loop -->
+<script src="engine/15-bake.js"></script>
+<script src="engine/16-lighting.js"></script>
+<script src="engine/16b-weather.js"></script>
+<script src="engine/16d-glass.js"></script>
+<script src="engine/17-player.js"></script>
+<script src="engine/18-hud.js"></script>
+<script src="engine/18c-settings.js"></script>
+<script src="engine/19-loop.js"></script>
+</body>
+</html>

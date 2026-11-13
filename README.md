@@ -110,9 +110,11 @@ round the bothy.
 ## Layout
 
 ```
-index.html            the page: the world's config, the engine, the world's files, the engine's finish
+index.html            the demo's page: the world's config, the engine, the world's files, the engine's finish
+starter.html          the smallest world worth walking in: copy it and starter/ to begin a new one
 engine/               the engine (world-agnostic), numbered in load order
 world/                Pine Hollow, the demo world
+starter/              the starter world (two files)
 tools/                headless tests: walk, shot, zfight, signaudit, globals
 docs/ARCHITECTURE.md  load order, the frame, the registries, the hooks
 docs/WORLD-GUIDE.md   making a world, step by step
@@ -122,7 +124,9 @@ CLAUDE.md             the standing rules for working on the engine and its world
 
 ## Making a world
 
-Read `docs/WORLD-GUIDE.md`. In short: a `var WORLD={...}` config before the
+Start from `starter.html` and `starter/` (a clearing in the woods, a hut, a
+lamp, a bench, a person and a dog, in about forty lines), and read
+`docs/WORLD-GUIDE.md`. In short: a `var WORLD={...}` config before the
 engine; then your files call `Terrain.define` + `buildTerrain(terrainRings(...))`,
 `FOREST.wild/canopy/bounds`, `waterPlane`, `building(...)`, props, `crowdGroup`
 / `crowdAdd`, `PETS.add`, `warpTo`, and hooks for anything of your own; then
@@ -147,6 +151,18 @@ node tools/globals.js
 ```
 
 See CLAUDE.md's Tools section for each one.
+
+## Not extracted (yet)
+
+Some of Rest Area's systems were built for that one place and stay there,
+though each could become an engine module the same way: the interstate's
+traffic loop and its ramp paving and markings (`rampPave`, `interstateEdges`),
+the outboard pontoon boat and its docking, the house generator that lays out
+Lake Street's houses and their rooms, the arcade cabinet framework and its
+games, the TV screens and vending machines, and zombie mode. The hooks those
+used are all in the engine (`key`, `look`, `fixed`, `camera`, `atmos`, `sky`,
+`render`, `TIME_SCALE`, `GLOOM_U`, `GLASS`, `CAR_BEAMS_BORROW`), so a world
+that wants one can bring it over without touching the engine.
 
 ## Where it came from
 

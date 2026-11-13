@@ -288,14 +288,14 @@ const AUDIO=(function(){
       const s=ctx.createBufferSource(); s.buffer=noise(0.4,"white"); const f=ctx.createBiquadFilter(); f.type="bandpass";
       f.frequency.setValueAtTime(3200,t); f.frequency.exponentialRampToValueAtTime(1100,t+0.28); f.Q.value=1.6;
       const g=ctx.createGain(); env(g,t,0.015,0.11*vol,0.08,0.22); s.connect(f); f.connect(g); g.connect(master); s.start(t);
-    }else if(kind==="chains" || kind==="chainsoft"){  // a disc into a basket's chains (18i): a shower of little links ringing
+    }else if(kind==="chains" || kind==="chainsoft"){  // a disc into a basket's chains: a shower of little links ringing
       const k=kind==="chains" ? 1 : 0.45;
       for(let i=0;i<14;i++){ const at=t+Math.random()*0.35*k+i*0.012, f=2200+Math.random()*3600;
         tone(Math.random()<0.5 ? "triangle" : "sine", f, f*0.985, 0.10+Math.random()*0.12, (0.010+Math.random()*0.014)*vol*k, at, (Math.random()-0.5)*0.6, master); }
       const s=ctx.createBufferSource(); s.buffer=noise(0.6,"white"); const f=ctx.createBiquadFilter();
       f.type="bandpass"; f.frequency.value=6200; f.Q.value=1.4; const g=ctx.createGain(); env(g,t,0.004,0.05*vol*k,0.08,0.35);
       s.connect(f); f.connect(g); g.connect(master); s.start(t);
-    }else if(kind==="bagboard"){                  // a cornhole bag onto the board (14r): a flat thud with the plywood's knock
+    }else if(kind==="bagboard"){                  // a bag onto a cornhole board: a flat thud with the plywood's knock
       tone("sine", 110, 70, 0.16, 0.20*vol, t, 0, master); tone("triangle", 330, 240, 0.07, 0.05*vol, t, 0, master);
       const s=ctx.createBufferSource(); s.buffer=noise(0.2,"pink"); const f=ctx.createBiquadFilter();
       f.type="lowpass"; f.frequency.value=1400; const g=ctx.createGain(); env(g,t,0.002,0.14*vol,0.02,0.10);
@@ -335,7 +335,7 @@ const AUDIO=(function(){
       const long=kind==="boom", s=ctx.createBufferSource(); s.buffer=noise(long?1.0:0.3,"white"); const f=ctx.createBiquadFilter();
       f.type="lowpass"; f.frequency.setValueAtTime(long?2400:3800,t); f.frequency.exponentialRampToValueAtTime(long?160:600,t+(long?0.9:0.25));
       const g=ctx.createGain(); env(g,t,0.004,(long?0.12:0.06)*vol,0.04,long?0.85:0.22); s.connect(f); f.connect(g); g.connect(master); s.start(t);
-    }else if(kind==="paddle"){                    // the arcade's other three (18g): the ball off the bat,
+    }else if(kind==="paddle"){                    // a bat-and-ball game: the ball off the bat,
       tone("square", 520, null, 0.05, 0.025*vol, t, 0, master);
     }else if(kind==="wall"){                      //  off a wall,
       tone("square", 330, null, 0.04, 0.018*vol, t, 0, master);
@@ -368,7 +368,7 @@ const AUDIO=(function(){
       [523, 659, 784, 1046].forEach((f,i)=>tone("square", f, null, 0.07, 0.022*vol, t+i*0.05, 0, master));
     }else if(kind==="jingle"){                    // the start of a game, and a win
       [392, 523, 659, 784, 659, 784].forEach((f,i)=>tone("square", f, null, 0.09, 0.022*vol, t+i*0.09, 0, master));
-    }else if(kind==="drip"){                      // the sub-basement (12d): water off a pipe into standing water,
+    }else if(kind==="drip"){                      // water off a pipe into standing water,
       const f0=1300+Math.random()*900; tone("sine", f0, f0*1.9, 0.06, 0.05*vol, t, 0, master);
       tone("sine", f0*0.5, f0*0.7, 0.10, 0.02*vol, t+0.02, 0, master);
     }else if(kind==="knock"){                     //  three slow knocks on steel from the far side of a door,
@@ -381,7 +381,7 @@ const AUDIO=(function(){
       tone("sine", 620, 600, 1.4, 0.006*vol, t+0.6, 0, master);
     }else if(kind==="bell"){                      // the chapel's bell (14l): a strike, its partials dying slowly, and again
       for(const at of [t, t+2.2]) [[1,0.10],[2.0,0.05],[2.4,0.04],[3.0,0.025],[4.2,0.012]].forEach(([m,a])=>tone("sine", 196*m, 196*m*0.998, 4.5/Math.sqrt(m), a*Math.max(vol,0.25), at, 0, master));
-    }else if(kind==="wheel"){                     // 12e's wheel: the dogs' ratchet clicking back, a dry grind under it
+    }else if(kind==="wheel"){                     // a big valve wheel: the ratchet clicking back, a dry grind under it
       for(let k=0;k<22;k++){ const at=t+0.12+k*0.11+Math.random()*0.02; tone("square", 1400+Math.random()*300, 900, 0.025, 0.018*vol, at, 0, master); }
       const s=ctx.createBufferSource(); s.buffer=noise(2.6,"brown"); const f=ctx.createBiquadFilter(); f.type="bandpass"; f.frequency.value=240; f.Q.value=0.8;
       const g=ctx.createGain(); env(g,t,0.3,0.25*vol,1.8,0.5); s.connect(f); f.connect(g); g.connect(master); s.start(t);

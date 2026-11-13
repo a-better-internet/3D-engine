@@ -170,7 +170,7 @@ function standUp(){
     if(stood) break;
   }
   // The fan used to give up and leave you standing in the furniture — in a
-  // motel room the bed, the nightstand and the chair make pockets under
+  // small room the bed, the nightstand and the chair make pockets under
   // 0.68 m across, which is narrower than the player, so once you were in
   // one you could not walk out of it in any direction.
   if(!stood){
@@ -221,7 +221,7 @@ function interact(){
     if(c){ enterCar(c); return; } }
   if(nearestDoor && nearestDoor.occ){
     toast(["OCCUPIED","SOMEBODY CLEARS THEIR THROAT","\u201cSOMEONE'S IN HERE\u201d"][(Math.random()*3)|0],"#cfe0d4"); return; }
-  // a door that does something of its own first (12e's wheel) is handed the press
+  // a door that does something of its own first (its onUse) is handed the press
   if(nearestDoor && nearestDoor.onUse){ nearestDoor.onUse(nearestDoor); return; }
   if(nearestDoor){
     nearestDoor.manual = (nearestDoor.target>0.5) ? -1 : 1;
@@ -243,7 +243,7 @@ function interact(){
 function nearestUse(game){
   let best=null, bd=1e9;
   for(const u of USES){
-    if(!!u.game!==!!game) continue;                                // (the arcade's games are ENTER's, not E's: nearestUse(true))
+    if(!!u.game!==!!game) continue;                                // (games are ENTER's, not E's: nearestUse(true))
     if(u.when && !u.when()) continue;
     const d=Math.hypot(player.pos.x-u.x, player.pos.z-u.z);
     if(d<(u.r||1.6) && Math.abs(player.feetY-u.y)<1.2 && d<bd){ bd=d; best=u; }

@@ -429,7 +429,7 @@ function carParts(kind, paintHex, coarse){
     else for(let k=0;k<4;k++) vBox(OP, w*0.94, 0.012, 0.02, 0, gy-gh2*0.36+k*gh2*0.24, zf+0.02, 0x3b3e42, FIN.trim);
     vBox(OP, Math.min(s.w*1.5,1.0), D.intake[1], 0.03, 0, D.intake[0], zf+0.003, 0x141516, FIN.trim);
   }
-  // the back: plate (Pennsylvania: white, a blue band and a yellow one), and a tailgate/trunk seam
+  // the back: plate (white, a blue band and a yellow one), and a tailgate/trunk seam
   {
     const zt=B.zT-0.004, y=D.plateY;
     vBox(OP, 0.32, 0.165, 0.012, 0, y, zt, 0xf2f0e6, FIN.lens);

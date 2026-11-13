@@ -17,7 +17,7 @@
      glass   glass (clear), tint (dark); both are breakable panes (01's
              GLASS_PANES) if 8 cm or thinner and 12 cm or more each way
      lit     lamplens (warm, on after dark), tube (indoor, always on),
-             winglow (a window's glow at night), exitsign, ledgreen,
+             winglow, winwarm (a window's glow at night), exitsign, ledgreen,
              ledamber, ledred
      flat    the polygon-offset ladder for layers lying on one another:
              road (-1) → asphalt, walkflat, gravelbed (-2) → lotpave, bed,
@@ -101,6 +101,9 @@ bucketOf("mirror", ()=>new T.MeshStandardMaterial({color:0xffffff, metalness:0.6
 bucketOf("tube",   ()=>emitMat(0xeef2f0, 0.85, "indoor"));
 bucketOf("ceilfix",()=>glowMat({color:0x9c968c, emissive:0xf4f2ea, emissiveIntensity:0.30}, "indoor"));
 bucketOf("winglow",()=>glowMat({color:0xffffff, emissive:0xffe6b8, emissiveIntensity:0.18}, "warm"));
+/* a lit window: after dark the glass glows from the room behind it. A plane just inside each pane, facing out and only
+   out, so from inside it is culled and you look through the glass at the night; additive, so by day it is nothing */
+bucketOf("winwarm", ()=>basicGlowMat(0xffd7a0, "warm", T.AdditiveBlending, 0.42));
 bucketOf("lamplens", ()=>emitMat(0xffd7a0, 0.9, "warm"));
 bucketOf("exitsign",()=>emitMat(0xff2a1a, 0.9, "always"));
 bucketOf("ledgreen",()=>emitMat(0x3cff6a, 0.9, "always"));
@@ -264,11 +267,14 @@ function wall(bk, ax, c, t, a, b, y0, y1, ops, col, uvs, floorY){
 const liner=(bk, ax, fc, dir, a, b, y0, y1, ops, col, uvs)=>vliner(bk, ax, fc, pieces(a, b, y0, y1, holesIn(ops, a, b, y0, y1)), dir, col, uvs||0.5);
 
 const _BX=(w,h,d,x,y,z,col)=>bx("paintm", w,h,d, x,y,z, 0.5, 0, col);
-/* a window's glass (a breakable pane), its trim outside, its sill inside and, if you like, a pair of curtains.
-   ax: the wall's axis; c its centre plane; t its thickness; o the opening; out: +1/-1 the outside */
-function windowAt(ax, c, t, o, out, trim, curtain){
+/* a window's glass (a breakable pane), its trim outside, its sill inside and, if you like, a pair of curtains; and
+   unless lit is false, its glow after dark (a colour string tints it). ax: the wall's axis; c its centre plane; t its
+   thickness; o the opening; out: +1/-1 the outside */
+function windowAt(ax, c, t, o, out, trim, curtain, lit){
   const w=o.b-o.a, h=o.head-o.sill, m=(o.a+o.b)/2, ym=(o.sill+o.head)/2, B=_BX;
   push("glass", planeGeo(w-0.02, h-0.02, 0), ax==="x" ? m : c, ym, ax==="x" ? c : m, ax==="x" ? 0 : Math.PI/2, "#ffffff");
+  if(lit!==false){ const gi=c-out*0.035, ry=ax==="x" ? (out>0 ? 0 : Math.PI) : (out>0 ? Math.PI/2 : -Math.PI/2);
+    push("winwarm", planeGeo(w-0.04, h-0.04, 0), ax==="x" ? m : gi, ym, ax==="x" ? gi : m, ry, typeof lit==="string" ? lit : "#ffffff"); }
   const fo=c+out*(t/2+0.032), fi=c-out*(t/2+0.02);
   for(const [ww, hh, ds, dy] of [[w+0.16, 0.07, 0, h/2+0.035],[w+0.16, 0.07, 0, -h/2-0.035],[0.07, h, -w/2-0.035, 0],[0.07, h, w/2+0.035, 0]]){
     if(ax==="x") B(ww, hh, 0.04, m+ds, ym+dy, fo, trim||"#e8e4d8"); else B(0.04, hh, ww, fo, ym+dy, m+ds, trim||"#e8e4d8"); }
@@ -333,7 +339,7 @@ function flatRoof(bk, B, top, t, over, color, parapet){
        floorMat:{bk:"quarry", color}, ceiling:{bk:"plaster", color},
        openings:[
          {side:"s", at:4, door:"store", label:"THE DOOR", opensIn:false, w, h, tint, latch},
-         {side:"n", at:2, window:true, w:1.2, sill:0.9, head:2.1, curtain:"#a03a2a"},
+         {side:"n", at:2, window:true, w:1.2, sill:0.9, head:2.1, curtain:"#a03a2a", lit:true},   (lit:false: dark at night)
          {side:"e", at:3, w:1.0, h:2.1}            (an open doorway)
        ],
        roof:{kind:"gable", along:"x", ridge, over, bk:"shingle", color, ends:{bk, color}}
@@ -364,8 +370,9 @@ function building(o){
   for(const q of (o.openings||[])){
     const S=SIDES[q.side], start=(S.ax==="x" ? o.x0 : o.z0), m=start+q.at;
     const isWin=!!q.window, w=q.w||(isWin ? 1.2 : 1.0);
-    const op={a:m-w/2, b:m+w/2, sill:fl+(isWin ? (q.sill||0.9) : 0)-(isWin ? 0 : 0.05), head:fl+(q.head||q.h||(isWin ? 2.1 : 2.12)), q:q};
-    if(isWin) op.sill=fl+(q.sill||0.9);
+    // (a doorway is cut right down through the wall's foot, below the slab: no sill of wall is left under it to stand
+    //  in the way of a foot coming up from lower ground, and the slab's edge is the threshold)
+    const op={a:m-w/2, b:m+w/2, sill:isWin ? fl+(q.sill||0.9) : fl-0.45, head:fl+(q.head||q.h||(isWin ? 2.1 : 2.12)), q:q};
     ops[q.side].push(op);
   }
   // the walls, their liners, the openings' trim
@@ -375,7 +382,7 @@ function building(o){
     if(IN) liner(IN.bk, S.ax, S.fc, -S.out, S.ia, S.ib, fl, top, O, IN.color, IN.uv);
     for(const op of O){
       const q=op.q, mid=(op.a+op.b)/2;
-      if(q.window){ windowAt(S.ax, S.c, t, op, S.out, q.trim, q.curtain); continue; }
+      if(q.window){ windowAt(S.ax, S.c, t, op, S.out, q.trim, q.curtain, q.lit); continue; }
       // a doorway: a walkable flat across the wall, the frame, and a leaf if it has one
       if(S.ax==="x") addFlat(op.a, op.b, S.c-t/2-0.05, S.c+t/2+0.05, fl); else addFlat(S.c-t/2-0.05, S.c+t/2+0.05, op.a, op.b, fl);
       if(q.frame!==false){ if(S.ax==="x") frameX(S.c, t, op.a, op.b, op.head, q.frameColor, fl); else frameZ(S.c, t, op.a, op.b, op.head, q.frameColor, fl); }

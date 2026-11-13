@@ -6,7 +6,7 @@
    its siblings — see index.html. */
 /* ----------------------------------------------------------------------
    14u · WATER
-   waterPlane({x0, x1, z0, z1, y, color, tile}) lays a sheet over a basin
+   waterPlane({x0, x1, z0, z1, y, color, tile, ripple}) lays a sheet over a basin
    (the terrain's height function carves the bed: keep the ground under the
    water everywhere inside it, and above it everywhere outside), sets
    WATER_Y (14q's walkers keep out of it), and returns the mesh. Give the
@@ -43,7 +43,8 @@ function waterPlane(o){
   const w=o.x1-o.x0, d=o.z1-o.z0, g=new T.PlaneGeometry(w, d, 1, 1), tile=o.tile||3.5;
   const U=g.attributes.uv; for(let i=0;i<U.count;i++) U.setXY(i, U.getX(i)*w/tile, U.getY(i)*d/tile);
   const nrm=WATER_NRM;
-  const m=envOut(new T.MeshStandardMaterial({color:o.color||0x34505c, roughness:0.10, metalness:0.55, normalMap:nrm, normalScale:new T.Vector2(0.20, 0.20)}), 1.0);
+  const rs=o.ripple===undefined ? 0.20 : o.ripple;          // (how hard the ripples are: a lake's 0.2, a sheltered pond's less)
+  const m=envOut(new T.MeshStandardMaterial({color:o.color||0x34505c, roughness:0.10, metalness:0.55, normalMap:nrm, normalScale:new T.Vector2(rs, rs)}), 1.0);
   const W=WATER.wake;
     m.onBeforeCompile=(sh)=>{
       sh.uniforms.uWake={value:W.pts}; sh.uniforms.uWakeT={value:W.T}; sh.uniforms.uFlow={value:W.flow};
