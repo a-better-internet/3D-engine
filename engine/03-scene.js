@@ -1,0 +1,268 @@
+"use strict";
+/* ENGINE · 03-scene.js
+   renderer, scene, cameras, base lights, flashlight, the sun's shadow camera,
+   and the shader patches every lit material takes: the tone curve, the
+   pale-colour ease, the shadow's edge fade, ground mist, aerial haze and the
+   optional gloom fog
+   Loaded as a classic script, in order, sharing one global scope with
+   its siblings — see index.html. */
+/* ----------------------------------------------------------------------
+   3 · RENDERER / SCENE / CAMERAS
+   ---------------------------------------------------------------------- */
+const app=document.getElementById("app") || (function(){ const d=document.createElement("div"); d.id="app";
+  d.style.cssText="position:fixed;inset:0"; document.body.appendChild(d); return d; })();
+/* --- graphics settings ----------------------------------------------------
+   Read here, before anything is built, so the renderer starts at the chosen
+   resolution and shadow size; the menu that changes them is 18c-settings.
+   res 0 is "native": the screen's own pixel density, up to 2x. */
+const GFX=(function(){
+  const D={res:0, fps:60, shadows:3, draw:2, lights:12, meter:false, aa:true};
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem(CFG.storageKey+".gfx")||"null"); }catch(e){}
+  const o=Object.assign({}, D, (s && typeof s==="object") ? s : {});
+  for(const k in D) if(typeof o[k]!==typeof D[k]) o[k]=D[k];
+  o.saved=!!(s && typeof s==="object");                    // (nothing saved yet: the first run, set to the card below)
+  o.auto=1;                                                  // (resolution AUTO's own scale, res -1: 18c moves it)
+  return o;
+})();
+// shadow levels: 0 is none at all; the map covers a square the player stands
+// in the middle of, and a smaller map is spread over a smaller square
+const SHADOW_LEVELS=[null,
+  {name:"LOW",    map:1024, half:38, soft:false},
+  {name:"MEDIUM", map:2048, half:48, soft:true},
+  {name:"HIGH",   map:3072, half:54, soft:true},
+  {name:"ULTRA",  map:4096, half:58, soft:true}];
+// draw distance: how far the near trees reach, how far anything is drawn, how far a place's hand-merged detail is
+// drawn (01's detailMesh),
+// and where the haze closes in so nothing is seen to vanish
+const DRAW_LEVELS=[
+  {name:"NEAR",   tree:54,  small:26, cull:620,  fog:600,  detail:360},
+  {name:"MEDIUM", tree:70,  small:34, cull:1150, fog:1120, detail:520},
+  {name:"FAR",    tree:84,  small:40, cull:1e9,  fog:1e9,  detail:800},
+  {name:"MAX",    tree:120, small:56, cull:1e9,  fog:1e9,  detail:1200}];
+/* res: a fixed scale, 0 the screen's own (up to 2x), or -1 AUTO: 18c moves GFX.auto between half and the screen's own,
+   down when frames run long and slowly back up when there is room, so a fast card stays sharp and a slow one stays
+   smooth */
+function gfxPixelRatio(){ const nat=Math.min(devicePixelRatio||1, 2); return GFX.res>0 ? GFX.res : GFX.res<0 ? Math.min(nat, GFX.auto) : nat; }
+GFX.shadows=Math.max(0, Math.min(SHADOW_LEVELS.length-1, GFX.shadows|0));
+GFX.draw=Math.max(0, Math.min(DRAW_LEVELS.length-1, GFX.draw|0));
+/* THE CARD. A laptop with two graphics chips (a MacBook Pro with an Intel and an AMD) gives a web page the slow one
+   unless the page asks for the other: so ask. Then read which one we got, and on the first run (nothing saved) set
+   the graphics to suit it: a chip built into the processor starts at MEDIUM with the resolution on AUTO; anything
+   else keeps HIGH. Whatever is chosen in the menu after that is kept, and the menu says which card is drawing. */
+const renderer=new T.WebGLRenderer({antialias:GFX.aa, powerPreference:"high-performance"});
+GFX.aa0=GFX.aa;                                              // (what the canvas was made with: a change takes a reload, 18c)
+GFX.gpu=(function(){ try{ const gl=renderer.getContext(), x=gl.getExtension("WEBGL_debug_renderer_info");
+  return String(x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)||""); }catch(e){ return ""; } })();
+GFX.tier=/intel|uhd|iris|hd graphics|mali|adreno|powervr|swiftshader|llvmpipe|software|microsoft basic/i.test(GFX.gpu) ? "integrated"
+        : /nvidia|geforce|quadro|rtx|gtx|radeon|amd|apple/i.test(GFX.gpu) ? "dedicated" : "unknown";
+if(!GFX.saved && GFX.tier==="integrated"){ GFX.res=-1; GFX.auto=1; GFX.shadows=1; GFX.draw=1; GFX.lights=8; }
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(gfxPixelRatio());
+renderer.shadowMap.enabled=GFX.shadows>0;
+renderer.shadowMap.type=(SHADOW_LEVELS[GFX.shadows]||SHADOW_LEVELS[3]).soft ? T.PCFSoftShadowMap : T.PCFShadowMap;
+try{ renderer.outputColorSpace=T.SRGBColorSpace; }catch(e){ renderer.outputEncoding=T.sRGBEncoding; }
+/* A SHOULDER, NOT A CURVE. Below 0.76 the output is the input to the last
+   bit, so every painted hex arrives as painted; above it each channel rolls
+   off towards 1.0 without reaching it, so a white picnic pad in full sun
+   keeps its edges and a sodium lamp keeps its colour. Per channel, so a
+   warm highlight stays warm. */
+T.ShaderChunk.tonemapping_pars_fragment =
+  T.ShaderChunk.tonemapping_pars_fragment.replace(
+    "vec3 CustomToneMapping( vec3 color ) { return color; }",
+    [ "vec3 CustomToneMapping( vec3 color ) {",
+      "  color *= toneMappingExposure;",
+      "  const float K = 0.76;",
+      "  vec3 lo = min( color, vec3( K ) );",
+      "  vec3 hi = max( color - vec3( K ), vec3( 0.0 ) );",
+      "  return lo + ( 1.0 - K ) * ( vec3( 1.0 ) - exp( -hi / ( 1.0 - K ) ) );",
+      "}" ].join("\n"));
+/* NOTHING PAINTED WHITE GOES WHITE IN THE SUN. Colours here are taken as painted (no sRGB decode), so a pale slab's
+   0.83 lit by a 1.3 sun plus the sky lands past the shoulder and reads as a white hole. Every lit surface's colour is
+   eased above 0.60: halfway back toward it, so pale concrete, white siding and white paint stay distinguishable in
+   full sun and still read pale. Below 0.60 every colour is untouched. Only the standard material (the world's)
+   takes it; the glows and the basic materials do not. */
+T.ShaderChunk.lights_physical_fragment=
+  "diffuseColor.rgb = min( diffuseColor.rgb, vec3( 0.60 ) ) + 0.5 * max( diffuseColor.rgb - vec3( 0.60 ), vec3( 0.0 ) );\n"+
+  T.ShaderChunk.lights_physical_fragment;
+/* NO EDGE TO THE SHADE. The key's map covers a square round the player (SHADOW_LEVELS) and stops; past its edge
+   everything is lit, and that edge moving with you reads as shadows being drawn in as you walk. So a shadow fades
+   out over the outer part of the map instead: full strength in the middle, nothing at the rim, no line anywhere. */
+{ const _sc=T.ShaderChunk.shadowmap_pars_fragment, _from="\t\t}\n\t\treturn shadow;\n\t}\n\tvec2 cubeToUV";
+  if(_sc.indexOf(_from)<0) console.warn("shadow edge fade: chunk not found");
+  T.ShaderChunk.shadowmap_pars_fragment=_sc.replace(_from,
+    "\t\t}\n\t\tfloat shEdge = min( min( shadowCoord.x, 1.0 - shadowCoord.x ), min( shadowCoord.y, 1.0 - shadowCoord.y ) );\n"+
+    "\t\treturn mix( 1.0, shadow, smoothstep( 0.0, 0.13, shEdge ) );\n\t}\n\tvec2 cubeToUV"); }
+/* GROUND MIST, IN THE FOG ITSELF. Every lit surface already mixes in the
+   haze by its distance; it now also mixes in a mist whose density is
+   thickest at the ground and thins out over a metre or two above it,
+   integrated along the line of sight. So it has no edges anywhere: the
+   grass at your feet is clear, the far side of the lawn goes milky, posts
+   and trunks fade into it at the bottom, and the crowns stand up out of
+   it. Thinner and thicker in slow-drifting patches. Past a hundred
+   metres or so it is held back from closing in completely, so the
+   far side of a lake is softened by it, not whited out. The world says how
+   much there is (set MIST_C.w > 0, typically at dawn and dusk; 14c-critters
+   does it); the two shared vec4s are plain objects, so every material's
+   copy of the uniform is the same one.
+     MIST_U: density per metre at the ground, the thinning height, the
+             ground level, the drift clock
+     MIST_C: its colour, and 0 to switch it off                          */
+const MIST_U={x:0, y:1.7, z:0, w:0}, MIST_C={x:0.86, y:0.88, z:0.90, w:0};
+/* AERIAL PERSPECTIVE. The haze a hill a kilometre off sits in is not the
+   pale sky at the horizon but bluer and darker than it: hills go blue-grey
+   with distance and lighten towards the sky only at the very end. So the
+   colour the fog mixes in is the horizon's times a tint, HAZE_U.rgb at the
+   middle distances easing to HAZE_F at the far end of the fog; w says how
+   much of that tint there is (19-loop: less of it in weather fog and at
+   night, when the haze is the weather's grey or the night's dark). */
+const HAZE_U={x:0.64, y:0.72, z:0.86, w:1};
+/* THE GLOOM: an optional heavy fog a mode can turn on from an `atmos` hook (19 clears GLOOM_U.x every frame, so it is
+   off unless something sets it again). A thick fog done plainly turns everything
+   past its far end into one flat colour: hills and woods as cut-outs against the sky. So while it is on: the fog is
+   thinner with height above the ground under you, so ridges and crowns stand up out of a thicker layer in the low
+   ground; it never quite closes on anything (a far ridge keeps a fifth of its own light and shade, more higher up);
+   it is denser and thinner in slow-drifting banks; and its colour is graded with distance, a darker green gloom
+   close by easing to a paler grey toward the horizon, so each distance is its own shade.
+     GLOOM_U: how much (0 off, 1 full), the ground's height under the camera, the drift clock, the far end in m */
+const GLOOM_U={x:0, y:0, z:0, w:200};
+for(const k in T.ShaderLib){ const u=T.ShaderLib[k].uniforms; if(u && u.fogColor){ u.uMist={value:MIST_U}; u.uMistC={value:MIST_C}; u.uHaze={value:HAZE_U}; u.uGloom={value:GLOOM_U}; } }
+T.UniformsLib.fog.uMist={value:MIST_U}; T.UniformsLib.fog.uMistC={value:MIST_C}; T.UniformsLib.fog.uHaze={value:HAZE_U}; T.UniformsLib.fog.uGloom={value:GLOOM_U};
+T.ShaderChunk.fog_pars_vertex += "\n#ifdef USE_FOG\n\tvarying vec3 vFogWorld;\n#endif";
+T.ShaderChunk.fog_vertex += "\n#ifdef USE_FOG\n\t{ mat3 vr=mat3(viewMatrix); vec3 v=mvPosition.xyz;"+
+  " vFogWorld=cameraPosition+vec3(dot(vr[0],v),dot(vr[1],v),dot(vr[2],v)); }\n#endif";
+T.ShaderChunk.fog_pars_fragment += "\n#ifdef USE_FOG\n\tvarying vec3 vFogWorld;\n\tuniform vec4 uMist;\n\tuniform vec4 uMistC;\n\tuniform vec4 uHaze;\n\tuniform vec4 uGloom;\n#endif";
+T.ShaderChunk.fog_fragment = [
+  "#ifdef USE_FOG",
+  "if(uMistC.w>0.001){",
+  "  float mH=uMist.y, h0=max(cameraPosition.y-uMist.z,0.0), h1=max(vFogWorld.y-uMist.z,0.0);",
+  "  float ea=exp(-h0/mH), eb=exp(-h1/mH), dy=h1-h0;",
+  "  float avg=abs(dy)>0.02 ? mH*(ea-eb)/dy : ea;",
+  "  vec2 q=vFogWorld.xz*0.019+vec2(uMist.w*0.011, uMist.w*0.006);",
+  "  vec2 qi=floor(q), qf=fract(q); qf=qf*qf*(3.0-2.0*qf);",
+  "  float n00=fract(sin(dot(qi,vec2(127.1,311.7)))*43758.5453), n10=fract(sin(dot(qi+vec2(1.0,0.0),vec2(127.1,311.7)))*43758.5453);",
+  "  float n01=fract(sin(dot(qi+vec2(0.0,1.0),vec2(127.1,311.7)))*43758.5453), n11=fract(sin(dot(qi+vec2(1.0,1.0),vec2(127.1,311.7)))*43758.5453);",
+  "  float nn=mix(mix(n00,n10,qf.x),mix(n01,n11,qf.x),qf.y);",
+  "  float md=distance(vFogWorld,cameraPosition);",
+  "  float mf=1.0-exp(-uMist.x*avg*md*(0.45+1.1*nn));",
+  // (a long way off it never closes in completely: across a field or the lake the far side shows through
+  // it, softened, where it would otherwise go one flat white band; in a wood no sight line is that long)
+  "  mf=min(mf, mix(1.0, 0.42, smoothstep(100.0, 520.0, md)));",
+  "  gl_FragColor.rgb=mix(gl_FragColor.rgb, uMistC.rgb, mf*uMistC.w);",
+  "}",
+  "#endif",
+  T.ShaderChunk.fog_fragment.replace("gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );",
+    // (on a clear day a long way off is never all haze: the far hills keep a fifth of their own light and shade,
+    // which is what tells a ridge from a flat cut-out; but the world's last couple of hundred metres go wholly into
+    // it, so its edge is never seen)
+    // (the edge is GROUND_EDGE's, 00: the last two hundred metres in from it; and anything coming up on the far plane goes
+    // the same way, so no hill is ever cut off by it)
+    "float edgeK = 1.0-smoothstep(20.0, 220.0, min(min(vFogWorld.x-("+GROUND_EDGE.x0.toFixed(1)+"), "+GROUND_EDGE.x1.toFixed(1)+"-vFogWorld.x), min(vFogWorld.z-("+GROUND_EDGE.z0.toFixed(1)+"), "+GROUND_EDGE.z1.toFixed(1)+"-vFogWorld.z)));\n"+
+    "edgeK = max(edgeK, smoothstep(3500.0, 4100.0, distance(vFogWorld, cameraPosition)));\n"+
+    "fogFactor = min(fogFactor, mix(1.0-0.34*uHaze.w, 1.0, edgeK));\n"+
+    // (and a long way off the haze is a blue-grey a shade under the sky's, the colour far ridges are, easing to the
+    // sky's own only at the world's very edge)
+    "vec3 hazeC = fogColor*mix(vec3(1.0), mix(uHaze.rgb, vec3(0.74,0.81,0.93), fogFactor*fogFactor), uHaze.w*(1.0-edgeK));\n"+
+    // (the gloom: see GLOOM_U above)
+    "if(uGloom.x>0.001){\n"+
+    "  float gd=distance(vFogWorld, cameraPosition), gh=smoothstep(3.0, 70.0, vFogWorld.y-uGloom.y);\n"+
+    "  vec2 gq=vFogWorld.xz*0.0045+vec2(uGloom.z*0.004, -uGloom.z*0.0027), gi=floor(gq), gf2=fract(gq); gf2=gf2*gf2*(3.0-2.0*gf2);\n"+
+    "  float g00=fract(sin(dot(gi,vec2(127.1,311.7)))*43758.5453), g10=fract(sin(dot(gi+vec2(1.0,0.0),vec2(127.1,311.7)))*43758.5453);\n"+
+    "  float g01=fract(sin(dot(gi+vec2(0.0,1.0),vec2(127.1,311.7)))*43758.5453), g11=fract(sin(dot(gi+vec2(1.0,1.0),vec2(127.1,311.7)))*43758.5453);\n"+
+    "  float gn=mix(mix(g00,g10,gf2.x),mix(g01,g11,gf2.x),gf2.y);\n"+
+    "  float gu=1.0-exp(-gd/uGloom.w*(0.75+0.55*gn)*(1.0-0.45*gh)*1.8);\n"+
+    "  gu=min(gu, 0.78-0.16*gh);\n"+
+    "  float gF=mix(gu, 1.0, edgeK);\n"+
+    "  vec3 gC=fogColor*mix(vec3(0.78,0.85,0.78), vec3(1.12,1.12,1.09), clamp(0.6*smoothstep(30.0, 900.0, gd)+0.5*gh, 0.0, 1.0));\n"+
+    "  fogFactor=mix(fogFactor, gF, uGloom.x); hazeC=mix(hazeC, mix(gC, fogColor, edgeK), uGloom.x);\n"+
+    "}\n"+
+    "\tgl_FragColor.rgb = mix( gl_FragColor.rgb, hazeC, fogFactor );")].join("\n");
+if(T.ShaderChunk.fog_fragment.indexOf("hazeC")<0) console.warn("fog: the haze tint did not take");
+renderer.toneMapping=T.CustomToneMapping;
+renderer.toneMappingExposure=1.0;
+app.appendChild(renderer.domElement);
+const MAXANISO=Math.min(8, renderer.capabilities.getMaxAnisotropy());
+for(const k in TEX){ if(TEX[k] && TEX[k].isTexture) TEX[k].anisotropy=MAXANISO; }
+
+const scene=new T.Scene();
+/* A field of view that does not stretch: about 88 degrees across on any
+   screen, held between 50 and 66 vertically; the wheel only offsets it. */
+const FOV_ACROSS=88, FOV_MIN=50, FOV_MAX=66;
+function baseFov(aspect){
+  const h=FOV_ACROSS*Math.PI/180;
+  const v=2*Math.atan(Math.tan(h/2)/Math.max(aspect,0.2))*180/Math.PI;
+  return Math.max(FOV_MIN, Math.min(FOV_MAX, v));
+}
+let fovZoom=0;
+// near 0.24: depth precision is set by the near plane, and the player can
+// never be closer than the collision radius to anything anyway
+const camera=new T.PerspectiveCamera(baseFov(innerWidth/innerHeight), innerWidth/innerHeight, 0.24, 4200);
+const ortho=new T.OrthographicCamera(-60,60,45,-45,0.1,700);
+let view="fp", fov=camera.fov;
+function applyFov(){
+  fov=Math.max(30, Math.min(72, baseFov(camera.aspect)+fovZoom));
+  camera.fov=fov; camera.updateProjectionMatrix();
+}
+
+/* --- Layer 1 · base fill: sky light from above, green bounce from below ---- */
+const hemi=new T.HemisphereLight(0xdfe8f0, 0x3f4a2c, 0.72); scene.add(hemi);
+const amb =new T.AmbientLight(0xf2f2ea, 0.12); scene.add(amb);
+
+/* --- the flashlight: one spot moved onto the camera every frame ----------
+   Never hidden, only turned down to nothing: a light coming or going changes every lit shader in the world (see
+   THE SHADOW STAYS ON, below), and the torch is switched on and off all the time. */
+const torch=new T.SpotLight(0xfff0d0, 0.0, 34, 0.40, 0.55, 1.35);
+torch.castShadow=false;
+const torchTarget=new T.Object3D();
+scene.add(torch); scene.add(torchTarget);
+torch.target=torchTarget;
+const torchSpill=new T.PointLight(0xffe9c0, 0.0, 6.0, 1.7);
+scene.add(torchSpill);
+let torchOn=false, torchLvl=0;
+const _torchDir=new T.Vector3();
+
+/* --- Layer 2 · the one shadow-casting key (sun, becomes moon at night) --
+   The frustum follows the player in whole texels, and the light stands
+   KEY_D out along the sun from a target at the player, so the depth map
+   spans ±100 m and the bias can be tiny. About 108 m across: a treeline
+   thirty metres off has to throw its shade onto the lawn you are standing
+   on, and 3072 texels still make it 3.5 cm each. */
+const key=new T.DirectionalLight(0xfff3df, 1.10);
+key.position.set(70,110,50); key.castShadow=GFX.shadows>0;
+const ksc=key.shadow.camera;
+const KEY_D=120;
+let SHADOW_SNAP=0.07;
+// the map's size and the square it covers, from the settings; the frustum
+// still follows the player in whole texels, so the step is recomputed too
+function setShadowLevel(lv){
+  const L=SHADOW_LEVELS[lv]||SHADOW_LEVELS[3];
+  key.shadow.mapSize.set(L.map, L.map);
+  if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map=null; }
+  ksc.left=-L.half; ksc.right=L.half; ksc.top=L.half; ksc.bottom=-L.half;
+  ksc.updateProjectionMatrix();
+  SHADOW_SNAP=(ksc.right-ksc.left)/L.map*2;
+}
+ksc.near=KEY_D-110; ksc.far=KEY_D+110;
+setShadowLevel(GFX.shadows);
+/* AND THEN TELL IT. An OrthographicCamera builds its projection once; change
+   its bounds without this and the world is shadowed through the stock 10 m
+   box (setShadowLevel does). */
+key.shadow.bias=-0.00005; key.shadow.normalBias=0.014;
+scene.add(key); scene.add(key.target);
+/* THE SHADOW STAYS ON. A light that starts or stops casting changes every lit shader in the world, and three builds
+   them all again at once: a freeze of a second or more on a slow card, at dusk, at dawn and whenever the cloud
+   closed in. So the key casts for as long as shadows are on in the menu, and when its shade should go (the sun
+   down, a heavy overcast) the shadow camera's far plane is drawn in to a millimetre past its near: every fragment
+   is then outside it and lit, and the map is not drawn again until the shade comes back. One last draw first, so
+   the matrix the shaders read is the thin one. The loop asks each frame through keyShadeWant (16b clears it in
+   cloud); keyShadow() acts only on a change. NEVER add or remove a light, or flip castShadow, while the game runs:
+   turn it down to intensity 0 instead. */
+let keyShadeWant=true, _keyShade=true;
+function keyShadow(on){
+  if(on===_keyShade) return;
+  _keyShade=on;
+  ksc.far=on ? KEY_D+110 : ksc.near+0.001;
+  ksc.updateProjectionMatrix();
+  renderer.shadowMap.autoUpdate=on;
+  renderer.shadowMap.needsUpdate=true;
+}
