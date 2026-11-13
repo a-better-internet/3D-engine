@@ -33,7 +33,7 @@ const STORE=building({
   // shelves along the back wall and an island, cans and boxes on them
   for(const [x0,x1,z,d] of [[-29.5,-21,-31.35,0.5],[-27,-21,-27.6,0.9]]){
     for(const y of [0.1, 0.55, 1.0, 1.45]) bx("paintm", x1-x0, 0.03, d, (x0+x1)/2, F+y, z, 0.5, 0, "#c8ccc8");
-    for(const x of [x0+0.02, x1-0.02]) bx("paintm", 0.04, 1.6, d, x, F+0.8, z, 0.5, 0, "#9aa0a0");
+    for(const x of [x0, x1]) bx("paintm", 0.05, 1.6, d+0.02, x, F+0.8, z, 0.5, 0, "#9aa0a0");     // (the uprights straddle the shelves' ends)
     addCol(x0, x1, z-d/2, z+d/2, F-0.5, F+1.6);
     for(let x=x0+0.25; x<x1-0.2; x+=0.32) for(const y of [0.55, 1.0, 1.45]){ const h=0.14+hash2(x,y)*0.14;
       bx("paintm", 0.22, h, d*0.6, x, F+y+0.016+h/2, z, 0, 0, ["#c83a2a","#e8c23a","#3a6aa8","#2e7a4a","#e8e4d8"][((x*7+y*3)|0)%5]); } }

@@ -276,8 +276,9 @@ function windowAt(ax, c, t, o, out, trim, curtain, lit){
   if(lit!==false){ const gi=c-out*0.035, ry=ax==="x" ? (out>0 ? 0 : Math.PI) : (out>0 ? Math.PI/2 : -Math.PI/2);
     push("winwarm", planeGeo(w-0.04, h-0.04, 0), ax==="x" ? m : gi, ym, ax==="x" ? gi : m, ry, typeof lit==="string" ? lit : "#ffffff"); }
   const fo=c+out*(t/2+0.032), fi=c-out*(t/2+0.02);
-  for(const [ww, hh, ds, dy] of [[w+0.16, 0.07, 0, h/2+0.035],[w+0.16, 0.07, 0, -h/2-0.035],[0.07, h, -w/2-0.035, 0],[0.07, h, w/2+0.035, 0]]){
-    if(ax==="x") B(ww, hh, 0.04, m+ds, ym+dy, fo, trim||"#e8e4d8"); else B(0.04, hh, ww, fo, ym+dy, m+ds, trim||"#e8e4d8"); }
+  // (the jambs a centimetre deeper than the head and sill they meet, so no face of one lies in a face of the other)
+  for(const [ww, hh, ds, dy, dp] of [[w+0.16, 0.07, 0, h/2+0.035, 0.04],[w+0.16, 0.07, 0, -h/2-0.035, 0.04],[0.07, h, -w/2-0.035, 0, 0.052],[0.07, h, w/2+0.035, 0, 0.052]]){
+    if(ax==="x") B(ww, hh, dp, m+ds, ym+dy, fo, trim||"#e8e4d8"); else B(dp, hh, ww, fo, ym+dy, m+ds, trim||"#e8e4d8"); }
   if(ax==="x") B(w+0.06, 0.03, 0.10, m, o.sill-0.015, fi-out*0.03, "#e8e4d8"); else B(0.10, 0.03, w+0.06, fi-out*0.03, o.sill-0.015, m, "#e8e4d8");
   if(curtain) for(const sd of [-1,1]){ const cx2=m+sd*(w/2-0.05);
     if(ax==="x") B(0.22, h+0.12, 0.02, cx2, ym+0.02, fi-out*0.05, curtain); else B(0.02, h+0.12, 0.22, fi-out*0.05, ym+0.02, cx2, curtain); }

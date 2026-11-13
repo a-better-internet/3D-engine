@@ -62,8 +62,10 @@ function parkBench(x, z, ry, y0, color){
   for(const [lz, ly] of [[0.10, 0.45],[-0.06, 0.45]]) lbx(f, "wood", 1.62, 0.04, 0.13, 0, y+ly, lz, 1.2, W);
   for(const [ly, lz] of [[0.66, -0.20],[0.82, -0.22]]) push("wood", boxGeo(1.62, 0.11, 0.035, 1.2), f.x(0, lz), y+ly, f.z(0, lz), ry, W, -0.18, 0);
   for(const lx of [-0.72, 0.72]){
-    lbx(f, "paintm", 0.05, 0.43, 0.05, lx, y+0.215, 0.16, 0, IRON); lbx(f, "paintm", 0.05, 0.86, 0.05, lx, y+0.43, -0.19, 0, IRON);
-    lbx(f, "paintm", 0.055, 0.04, 0.42, lx, y+0.41, -0.02, 0, IRON); lbx(f, "paintm", 0.05, 0.04, 0.30, lx, y+0.62, 0.02, 0, IRON);
+    // (the legs stop inside the arm that carries the seat, and the arm is wider and runs past both legs: no face of one
+    //  lies in a face of another)
+    lbx(f, "paintm", 0.05, 0.40, 0.05, lx, y+0.20, 0.16, 0, IRON); lbx(f, "paintm", 0.05, 0.86, 0.05, lx, y+0.43, -0.19, 0, IRON);
+    lbx(f, "paintm", 0.068, 0.04, 0.45, lx, y+0.41, -0.015, 0, IRON); lbx(f, "paintm", 0.05, 0.04, 0.30, lx, y+0.62, 0.02, 0, IRON);
   }
   lcol(f, 1.66, 0.44, 0, -0.03, y-0.5, y+0.5);
   for(const lx of [-0.4, 0.4]){ const sx=f.x(lx, 0.30), sz=f.z(lx, 0.30); addSeat(sx, sz, y, ry, "A BENCH"); }

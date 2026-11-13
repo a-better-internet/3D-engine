@@ -17,6 +17,17 @@ which uses every system; it is the best example to copy from.
 
 ## Pine Hollow (the demo world)
 
+![The green, the store and the cabin](docs/shots/green.jpg)
+
+| | | |
+|---|---|---|
+| ![Overview from the drone](docs/shots/overview.jpg) | ![The pavilion, a dog fetching](docs/shots/pavilion.jpg) | ![Inside the store](docs/shots/store-inside.jpg) |
+| ![Night: lit windows and a lamp](docs/shots/night.jpg) | ![The fire after dark](docs/shots/fire.jpg) | ![The root cellar: no clock underground](docs/shots/cellar.jpg) |
+| ![Autumn](docs/shots/autumn.jpg) | ![A thunderstorm](docs/shots/storm.jpg) | ![In the woods](docs/shots/woods.jpg) |
+
+(Rendered headless by `tools/shot.js` with software GL; in Chrome on a real
+card it looks the same, with antialiasing.)
+
 A village green in a clearing in the woods: a brick general store with its
 lot and cars you can drive, a cabin, an open pavilion with picnic tables, a
 pond with a jetty and a man fishing off it, a fire ring that is lit after

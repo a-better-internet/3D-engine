@@ -43,8 +43,10 @@ const BOTHY=building({
   floorAt("concrete", C.x0, C.x1, C.z0, C.z1, CF, "#9a968c", 0.5);
   // the stair: fifteen treads, each a solid block to the floor, the rise 21 cm and the run 40
   const N=15, rise=(FL-CF)/N, run=(S.x1-S.x0)/N;
-  for(let k=0;k<N;k++){ const xa=S.x1-k*run, xb=xa-run, top=FL-(k+1)*rise;
-    bx("wood", run+0.004, top-(CF-0.02), S.z1-S.z0, (xa+xb)/2, (top+CF-0.02)/2, (S.z0+S.z1)/2, 0.8, 0, k%2 ? "#8a6a4a" : "#946f4c"); }
+  // (each runs 4 mm on under the next one down, and every other one is 3 mm narrower each side, so no two treads' faces
+  //  lie in one plane; the top one stops at the slab's edge)
+  for(let k=0;k<N;k++){ const xa=S.x1-k*run, xb=xa-run-0.004, top=FL-(k+1)*rise, inz=k%2 ? 0.003 : 0, bot=CF-(k%2 ? 0.026 : 0.02);
+    bx("wood", xa-xb, top-bot, S.z1-S.z0-2*inz, (xa+xb)/2, (top+bot)/2, (S.z0+S.z1)/2, 0.8, 0, k%2 ? "#8a6a4a" : "#946f4c"); }
   addRamp(S.x0, S.x1, S.z0, S.z1, "x", S.x0-run*0.5, S.x1, CF, FL);
   // the wall between the stair and the room, from the cellar floor to the slab, open at the stair's foot
   wallBox("block", S.x0, C.x1-0.003, S.z0-0.15, S.z0, CF-0.3, CT, "#a8a294", 0.5, CF);
